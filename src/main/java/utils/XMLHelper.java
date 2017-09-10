@@ -9,12 +9,11 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.*;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
-
-import static utils.DateFormatter.formatDate;
 
 public class XMLHelper {
 
@@ -29,10 +28,15 @@ public class XMLHelper {
     }
 
     public static List<Program> getReferenceProgramsFrom(String source)
-            throws IOException, SAXException, ParserConfigurationException {
+            throws IOException, SAXException, ParserConfigurationException, XPathExpressionException {
 
         Document responseDoc = parseXmlFromString(source);
-        NodeList programs = responseDoc.getElementsByTagName("programme");
+
+        XPathFactory xPathfactory = XPathFactory.newInstance();
+        XPath xpath = xPathfactory.newXPath();
+        XPathExpression expr = xpath.compile(
+                "//programme[@start='2017-09-04 12:20:00' and @stop='2017-09-04 13:50:00']");
+        NodeList programs = (NodeList)expr.evaluate(responseDoc, XPathConstants.NODESET);
 
         List<Program> providerProgramList = new ArrayList<>();
 
@@ -41,7 +45,7 @@ public class XMLHelper {
                     .builder()
                     .title(responseDoc.getElementsByTagName("title").item(i).getTextContent())
                     .start(programs.item(i).getAttributes().getNamedItem("start").getNodeValue())
-                    .end(programs.item(i).getAttributes().getNamedItem("start").getNodeValue())
+                    .end(programs.item(i).getAttributes().getNamedItem("stop").getNodeValue())
                     .build();
 
             providerProgramList.add(program);
