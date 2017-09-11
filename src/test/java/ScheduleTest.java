@@ -1,17 +1,18 @@
 import data_objects.Program;
 import org.junit.Test;
 import org.xml.sax.SAXException;
-import utils.DateHelper;
 
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.*;
+import javax.xml.xpath.XPathExpressionException;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static com.google.common.truth.Truth.assertThat;
 import static io.restassured.RestAssured.get;
-import static utils.DateHelper.getCurrentDateFrom;
+import static utils.DateHelper.parseDateTimeFromSynchronizer;
 import static utils.JsonHelper.getBroadcastProgramsFrom;
+import static utils.JsonHelper.getCurrentDateTimeFromSynchronizer;
 import static utils.XMLHelper.getReferenceProgramsFrom;
 
 public class ScheduleTest {
@@ -24,10 +25,17 @@ public class ScheduleTest {
     public void broadcastScheduleEqualsToProviderSchedule()
             throws XPathExpressionException, IOException, SAXException, ParserConfigurationException {
 
-        List<Program> referenceSchedule = getReferenceProgramsFrom(get(providerRequestUrl).asString());
-        List<Program> broadcastSchedule = getBroadcastProgramsFrom(get(broadcastRequestUrl).asString());
-        String currentDateTime = getCurrentDateFrom(get(currentTimeRequestUrl).asString());
-        broadcastSchedule.forEach(DateHelper::formatStartEndDate);
+        String desiredChannelName = "1+1";
+
+        LocalDateTime currentDateTime = parseDateTimeFromSynchronizer(
+                getCurrentDateTimeFromSynchronizer(get(currentTimeRequestUrl).asString()));
+        String providerResponse = get(providerRequestUrl).asString();
+        String broadcastResponse = get(broadcastRequestUrl).asString();
+
+        List<Program> referenceSchedule =
+                getReferenceProgramsFrom(providerResponse, desiredChannelName, currentDateTime);
+        List<Program> broadcastSchedule =
+                getBroadcastProgramsFrom(broadcastResponse, desiredChannelName, currentDateTime);
 
         assertThat(broadcastSchedule).isEqualTo(referenceSchedule);
     }

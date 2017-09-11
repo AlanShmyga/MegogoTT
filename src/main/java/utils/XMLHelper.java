@@ -12,8 +12,11 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.xpath.*;
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import static utils.ProgramHelper.filterListOfProgramsByDate;
 
 public class XMLHelper {
 
@@ -27,30 +30,45 @@ public class XMLHelper {
         return dBuilder.parse(inputSource);
     }
 
-    public static List<Program> getReferenceProgramsFrom(String source)
+    public static List<Program> getReferenceProgramsFrom(String source, String channelName, LocalDateTime currentTime)
             throws IOException, SAXException, ParserConfigurationException, XPathExpressionException {
 
         Document responseDoc = parseXmlFromString(source);
-
-        XPathFactory xPathfactory = XPathFactory.newInstance();
-        XPath xpath = xPathfactory.newXPath();
-        XPathExpression expr = xpath.compile(
-                "//programme[@start='2017-09-04 12:20:00' and @stop='2017-09-04 13:50:00']");
-        NodeList programs = (NodeList)expr.evaluate(responseDoc, XPathConstants.NODESET);
+        String xpathExpression = "//programme[@channel='" + getChannelId(responseDoc, channelName) + "']";
+        NodeList programs = (NodeList) findByXpathInDocument(responseDoc, xpathExpression);
 
         List<Program> providerProgramList = new ArrayList<>();
 
         for(int i = 0; i < programs.getLength(); i++) {
+            String startTime = programs.item(i).getAttributes().getNamedItem("start").getNodeValue();
+            String stopTime = programs.item(i).getAttributes().getNamedItem("stop").getNodeValue();
+
             Program program = Program
                     .builder()
                     .title(responseDoc.getElementsByTagName("title").item(i).getTextContent())
-                    .start(programs.item(i).getAttributes().getNamedItem("start").getNodeValue())
-                    .end(programs.item(i).getAttributes().getNamedItem("stop").getNodeValue())
+                    .programStartTime(DateHelper.parseDateTimeFromReference(startTime))
+                    .programEndTime(DateHelper.parseDateTimeFromReference(stopTime))
                     .build();
 
             providerProgramList.add(program);
         }
 
-        return providerProgramList;
+        return filterListOfProgramsByDate(providerProgramList, currentTime);
+    }
+
+    private static String getChannelId(Document responseDoc, String channelName) throws XPathExpressionException {
+        String xpathExpression = "//channel[child::display-name[text()='" + channelName + "']]/@id";
+
+        return (String) findByXpathInDocument(responseDoc, xpathExpression);
+    }
+
+    private static Object findByXpathInDocument(Document source, String xpathExpression)
+            throws XPathExpressionException {
+
+        XPathFactory xPathfactory = XPathFactory.newInstance();
+        XPath xpath = xPathfactory.newXPath();
+        XPathExpression expr = xpath.compile(xpathExpression);
+
+        return expr.evaluate(source, XPathConstants.NODESET);
     }
 }
