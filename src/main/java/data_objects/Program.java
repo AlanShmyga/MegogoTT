@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -27,6 +27,8 @@ public class Program {
     private String end_timestamp;
     private Program[] grouped_programs;
     private String schedule_type;
+    private LocalDateTime programStartTime;
+    private LocalDateTime programEndTime;
 
     @Override
     public boolean equals(Object o) {
